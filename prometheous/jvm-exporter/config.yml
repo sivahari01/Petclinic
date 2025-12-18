@@ -4,5 +4,27 @@ lowercaseOutputName: true
 lowercaseOutputLabelNames: true
 
 rules:
-  - pattern: ".*"
+  # JVM Memory
+  - pattern: "java.lang<type=Memory><HeapMemoryUsage>(used|max)"
+    name: jvm_memory_heap_$1_bytes
+    type: GAUGE
+
+  # GC Metrics
+  - pattern: "java.lang<type=GarbageCollector,name=(.+)><>CollectionCount"
+    name: jvm_gc_collection_count
+    labels:
+      gc: "$1"
+
+  - pattern: "java.lang<type=GarbageCollector,name=(.+)><>CollectionTime"
+    name: jvm_gc_collection_time_ms
+    labels:
+      gc: "$1"
+
+  # Threads
+  - pattern: "java.lang<type=Threading><>ThreadCount"
+    name: jvm_threads_live
+
+  # CPU
+  - pattern: "java.lang<type=OperatingSystem><>ProcessCpuLoad"
+    name: jvm_process_cpu_load
 
