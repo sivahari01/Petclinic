@@ -1,0 +1,100 @@
+services:
+  # -------------------------
+  # MySQL Database
+  # -------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: petclinic-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: petclinic
+      MYSQL_USER: petclinic
+      MYSQL_PASSWORD: petclinic
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------
+  # Petclinic Application
+  # -------------------------
+  petclinic:
+    image: arey/springboot-petclinic
+    container_name: petclinic-app
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/petclinic?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: petclinic
+      SPRING_DATASOURCE_PASSWORD: petclinic
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQL8Dialect
+      SPRING_DATASOURCE_INITIALIZATION_MODE: never
+
+  # -------------------------
+  # Prometheus
+  # -------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    depends_on:
+      - node-exporter
+      - mysql-exporter
+
+  # -------------------------
+  # Node Exporter (Host metrics)
+  # -------------------------
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+
+  # -------------------------
+  # MySQL Exporter (DB traffic)
+  # -------------------------
+  mysql-exporter:
+    image: prom/mysqld-exporter:latest
+    container_name: mysql-exporter
+    restart: unless-stopped
+    ports:
+      - "9104:9104"
+    volumes:
+      - ./mysql-exporter/my.cnf:/etc/.my.cnf
+    command:
+      - "--config.my-cnf=/etc/.my.cnf"
+      - "--collect.global_status"
+      - "--collect.global_variables"
+      - "--collect.info_schema.innodb_metrics"
+      - "--collect.info_schema.processlist"
+      - "--collect.info_schema.tables"
+      - "--collect.info_schema.tables.databases=*"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  prometheus_data:
+    
