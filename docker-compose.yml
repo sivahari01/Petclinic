@@ -27,20 +27,29 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
+
+    # ✅ ESCAPED VARIABLE (NO WARNING)
+    command: sh -c "java $$JAVA_OPTS -jar /petclinic.jar"
+
     environment:
       SPRING_PROFILES_ACTIVE: mysql
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/petclinic?useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: petclinic
       SPRING_DATASOURCE_PASSWORD: petclinic
-
-      # ✅ AUTO CREATE / UPDATE TABLES
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-
-      # ✅ CORRECT DIALECT FOR MYSQL 8
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQL8Dialect
-
-      # ❌ DISABLE OLD schema.sql execution
       SPRING_DATASOURCE_INITIALIZATION_MODE: never
+
+      JAVA_OPTS: >
+        -Xms256m
+        -Xmx512m
+        -XX:MaxMetaspaceSize=128m
+        -XX:+UseG1GC
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/tmp
+        -Dfile.encoding=UTF-8
+        -Duser.timezone=UTC
+        -Djava.security.egd=file:/dev/./urandom
 
 volumes:
   mysql-data:
